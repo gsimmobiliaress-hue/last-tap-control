@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Last Tap Control</title>
+<style>
+:root{--bg:#090b0e;--card:#15191f;--line:#30363d;--orange:#ff7a00;--green:#35d07f;--red:#ff5b5b;--muted:#9da7b3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font-family:Arial,sans-serif}header{padding:18px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0d1014;z-index:5}
+h1{margin:0;font-size:23px}.brand{color:var(--orange)}main{max-width:1200px;margin:auto;padding:16px}.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:14px}.tabs button,.btn{border:1px solid var(--line);background:#222831;color:#fff;border-radius:9px;padding:11px 13px;font-weight:700;cursor:pointer}.tabs button.active,.primary{background:var(--orange);color:#111;border-color:var(--orange)}.danger{background:#722828}.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}label{font-size:13px;color:var(--muted)}input,select{width:100%;padding:11px;margin-top:5px;border-radius:8px;border:1px solid var(--line);background:#0d1117;color:#fff;font-size:16px}.panel{display:none}.panel.active{display:block}table{width:100%;border-collapse:collapse;min-width:650px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}.scroll{overflow:auto}.ok{color:var(--green)}.bad{color:var(--red)}.muted{color:var(--muted)}.fire{font-size:20px}.matgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}.timer{font-size:42px;font-weight:900;margin:12px 0}.match{font-size:18px;font-weight:800}.stat{font-size:30px;font-weight:800}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+</style></head>
+<body><header><h1><span class="brand">LAST TAP</span> CONTROL <span class="muted">V1</span></h1></header>
+<main>
+<div class="tabs" id="tabs">
+<button data-tab="dashboard" class="active">Dashboard</button><button data-tab="athletes">Atleti & Peso</button><button data-tab="survival">Survival</button><button data-tab="mats">MAT</button><button data-tab="audit">Audit Log</button>
+</div>
+<section id="dashboard" class="panel active"><div class="grid">
+<div class="card"><div class="muted">Atleti</div><div class="stat" id="dAth">0</div></div>
+<div class="card"><div class="muted">READY</div><div class="stat ok" id="dReady">0</div></div>
+<div class="card"><div class="muted">Fuori peso</div><div class="stat bad" id="dOver">0</div></div>
+<div class="card"><div class="muted">Sopravvissuti</div><div class="stat" id="dAlive">0</div></div></div>
+<div class="card"><h3>Scenario di prova</h3><p class="muted">Carica 8 atleti PRO -80 kg. Un atleta è volutamente fuori peso.</p><button class="btn primary" id="demo">CARICA 8 ATLETI TEST</button><button class="btn danger" id="reset">RESET</button></div></section>
+<section id="athletes" class="panel"><div class="card"><h3>Registra atleta / pesata</h3><div class="grid">
+<label>Nome<input id="name" placeholder="Marco Rossi"></label><label>Team<input id="team" placeholder="Team"></label>
+<label>Livello<select id="level"><option>PRO</option><option>AMATEUR</option></select></label>
+<label>Categoria<select id="cat"><option>-70</option><option selected>-80</option><option>-90</option><option>+90</option></select></label>
+<label>Peso ufficiale<input id="weight" type="number" step=".1" placeholder="79.4"></label></div><br><button class="btn primary" id="add">REGISTRA</button></div>
+<div class="card scroll"><table><thead><tr><th>Atleta</th><th>Livello</th><th>Categoria</th><th>Peso</th><th>Stato</th><th>Vite</th></tr></thead><tbody id="alist"></tbody></table></div></section>
+<section id="survival" class="panel"><div class="card"><div class="row"><button class="btn primary" id="generate">GENERA ROUND</button><span id="roundInfo" class="muted"></span></div></div><div id="pairings"></div></section>
+<section id="mats" class="panel"><div id="matgrid" class="matgrid"></div></section>
+<section id="audit" class="panel"><div class="card"><h3>Audit Log</h3><div id="logs" class="muted"></div></div></section>
+</main>
+<script>
+(function(){
+const KEY="lastTapControlV1";
+let state={athletes:[],matches:[],logs:[],round:0,seq:1};
+function el(id){return document.getElementById(id)}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function load(){try{let x=JSON.parse(localStorage.getItem(KEY));if(x)state=x}catch(e){}}
+function id(){return "x"+(state.seq++)}
+function limit(c){return c=="-70"?70:c=="-80"?80:c=="-90"?90:999}
+function fire(n){return n>0?"🔥".repeat(n):"💀"}
+function log(s){state.logs.unshift(new Date().toLocaleString("it-IT")+" — "+s);save()}
+function ready(a){return a.weight<=limit(a.cat)}
+function render(){
+ el("dAth").textContent=state.athletes.length;el("dReady").textContent=state.athletes.filter(ready).length;
+ el("dOver").textContent=state.athletes.filter(a=>!ready(a)).length;el("dAlive").textContent=state.athletes.filter(a=>ready(a)&&a.lives>0).length;
+ el("alist").innerHTML=state.athletes.map(a=>`<tr><td><b>${a.name}</b><br><span class="muted">${a.team}</span></td><td>${a.level}</td><td>${a.cat}</td><td>${a.weight.toFixed(1)} kg</td><td class="${ready(a)?"ok":"bad"}">${ready(a)?"✓ READY":"✕ FUORI PESO"}</td><td class="fire">${fire(a.lives)}</td></tr>`).join("");
+ el("roundInfo").textContent=state.round?"Round "+state.round:"";
+ el("pairings").innerHTML=state.matches.map(m=>`<div class="card"><b>MAT ${m.mat}</b> — ${m.status}<p class="match">${m.a.name} ${fire(m.a.lives)} vs ${m.b.name} ${fire(m.b.lives)}</p></div>`).join("");
+ let mats="";for(let n=1;n<=4;n++){let m=state.matches.find(x=>x.mat==n&&x.status!="DONE");mats+=m?matCard(m):`<div class="card"><h3>MAT ${n}</h3><span class="muted">LIBERO</span></div>`}el("matgrid").innerHTML=mats;
+ el("logs").innerHTML=state.logs.map(x=>"<div style='padding:6px 0;border-bottom:1px solid #252a31'>"+x+"</div>").join("");
+ save()
+}
+function matCard(m){return `<div class="card"><h3>MAT ${m.mat}</h3><div class="match">${m.a.name} ${fire(m.a.lives)}<br>VS<br>${m.b.name} ${fire(m.b.lives)}</div><div class="timer" id="tm-${m.id}">${fmt(m.time)}</div><button class="btn" onclick="LT.toggle('${m.id}')">START / PAUSA</button><br><button class="btn primary" onclick="LT.result('${m.id}','A')">SUB ${m.a.name}</button><button class="btn primary" onclick="LT.result('${m.id}','B')">SUB ${m.b.name}</button><button class="btn danger" onclick="LT.result('${m.id}','T')">TEMPO</button><br><button class="btn danger" onclick="LT.result('${m.id}','DQA')">DQ ${m.a.name}</button><button class="btn danger" onclick="LT.result('${m.id}','DQB')">DQ ${m.b.name}</button></div>`}
+function fmt(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function add(n,t,l,c,w){state.athletes.push({id:id(),name:n,team:t||"—",level:l,cat:c,weight:w,lives:2,bye:0,busy:false});log(n+" pesata "+w.toFixed(1)+" kg — "+(w<=limit(c)?"READY":"FUORI PESO"))}
+el("demo").onclick=()=>{state={athletes:[],matches:[],logs:[],round:0,seq:1};[["Rossi",79.4],["Bianchi",78.8],["Verdi",80],["Neri",77.9],["Costa",79.8],["Gallo",76.6],["Riva",79.1],["Moro",80.6]].forEach(x=>add(x[0],"Team Test","PRO","-80",x[1]));log("Scenario test caricato");render()};
+el("reset").onclick=()=>{if(confirm("Cancellare tutti i dati locali?")){localStorage.removeItem(KEY);state={athletes:[],matches:[],logs:[],round:0,seq:1};render()}};
+el("add").onclick=()=>{let n=el("name").value.trim(),w=parseFloat(el("weight").value);if(!n||isNaN(w)){alert("Inserisci nome e peso ufficiale");return}add(n,el("team").value,el("level").value,el("cat").value,w);render()};
+el("generate").onclick=()=>{if(state.matches.some(m=>m.status!="DONE")){alert("Completa prima tutti i match del round corrente.");return}let pool=state.athletes.filter(a=>ready(a)&&a.lives>0&&!a.busy).sort((a,b)=>b.lives-a.lives||a.bye-b.bye);if(pool.length<2){alert("Non ci sono abbastanza atleti READY.");return}state.round++;state.matches=[];let mat=1;while(pool.length>1){let a=pool.shift(),idx=pool.findIndex(x=>x.lives==a.lives);if(idx<0)idx=0;let b=pool.splice(idx,1)[0];a.busy=b.busy=true;state.matches.push({id:id(),a:a,b:b,mat:mat,status:"QUEUED",time:360});mat=mat%4+1}if(pool.length){pool[0].bye++;log(pool[0].name+" riceve BYE")}log("Generato round "+state.round);render()};
+window.LT={toggle:function(mid){let m=state.matches.find(x=>x.id==mid);if(!m)return;m.status=m.status=="LIVE"?"QUEUED":"LIVE";log("MAT "+m.mat+" "+m.status);render()},result:function(mid,r){let m=state.matches.find(x=>x.id==mid);if(!m||m.status=="DONE")return;m.status="DONE";m.a.busy=m.b.busy=false;if(r=="A"){m.b.lives--;log("SUB "+m.a.name+" — "+m.b.name+" perde una vita")}if(r=="B"){m.a.lives--;log("SUB "+m.b.name+" — "+m.a.name+" perde una vita")}if(r=="T"){m.a.lives--;m.b.lives--;log("Tempo scaduto — entrambi perdono una vita")}if(r=="DQA"){m.a.lives=0;log("DQ "+m.a.name)}if(r=="DQB"){m.b.lives=0;log("DQ "+m.b.name)}render()}};
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll(".panel,.tabs button").forEach(x=>x.classList.remove("active"));el(b.dataset.tab).classList.add("active");b.classList.add("active");render()});
+setInterval(()=>{let ch=false;state.matches.forEach(m=>{if(m.status=="LIVE"&&m.time>0){m.time--;ch=true;if(m.time==0)LT.result(m.id,"T")}});if(ch)render()},1000);
+load();render()
+})();
+</script></body></html>
